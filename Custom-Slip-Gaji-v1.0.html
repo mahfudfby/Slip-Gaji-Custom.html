@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pembuat Slip Gaji Kustom & Kalkulator BPJS</title>
+    
+
+<script src="https://cdn.tailwindcss.com"></script>
+    
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* Custom styles for professional appearance */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        
+        /* Styles for the slip container to mimic a printable document (21cm x 12cm) */
+        #slip-container {
+            width: 794px; /* 21cm equivalent at 96 DPI */
+            height: 454px; /* 12cm equivalent at 96 DPI - LOCKED SIZE */
+            max-width: 100%;
+            margin: 2rem auto;
+            background-color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden; /* Ensure content doesn't exceed the fixed height */
+        }
+
+        /* Specific styles for currency inputs to enforce number only */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        /* Styling for the signature image positioning */
+        .signature-image {
+            position: absolute;
+            bottom: 0; 
+            height: 100%; 
+            width: auto; 
+            object-fit: contain;
+        }
+
+        /* Global style for label/input grouping */
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem; /* Space between label and input */
+        }
+        .input-group label {
+            width: 35%; /* Fixed width for the label */
+            flex-shrink: 0;
+        }
+        .input-group input, .input-group select {
+            width: 65%; /* Remaining width for the input */
+        }
+
+        /* Override the flex-1 setup for earnings/deductions to use the new group class */
+        .earnings-item, .deduction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* MODIFIKASI: Styling untuk memperbesar logo (Tinggi 60px, Maks Lebar 300px) */
+        #outputCompanyLogo {
+            height: 60px; /* Tinggi pasti 60px */
+            max-width: 300px; /* Batas lebar maksimum 300px */
+            width: auto; /* Penting agar tidak meregang dan mempertahankan rasio */
+        }
+        #logoTextPlaceholder {
+            font-size: 1.5rem; /* Ukuran teks placeholder disesuaikan */
+        }
+
+        /* Styling untuk tanda tangan agar lebih terlihat */
+        #outputReceiverSignature {
+            height: 70px; /* Ukuran tinggi yang lebih pas untuk tanda tangan */
+            max-width: 120px; /* Batas lebar */
+            object-fit: contain;
+            position: absolute;
+            bottom: 0px; /* Posisikan ke bawah */
+            right: 0px; /* Posisikan ke kanan */
+            opacity: 0.8; /* Sedikit transparan agar terlihat seperti tanda tangan asli */
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Aplikasi Pembuat Slip Gaji Terintegrasi (BPJS & PPh 21)</h1>
+        
+        
+
+<div class="mb-8 p-4 bg-white shadow-lg rounded-lg flex justify-center sticky top-0 z-10">
+            <button id="exportBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 shadow-md transform hover:scale-[1.02]">
+                ⬇️ Export Slip Gaji sebagai PNG
+            </button>
+        </div>
+
+        
+
+<div class="grid lg:grid-cols-2 gap-8">
+            
+
+<div class="bg-white p-6 md:p-8 shadow-lg rounded-xl h-fit">
+                <h2 class="text-xl font-semibold mb-6 border-b pb-2 text-gray-700">Formulir Input Data Slip Gaji</h2>
+
+                
+
+<div class="space-y-4 mb-8">
+                    <label class="block text-sm font-bold text-gray-700">Detail Perusahaan</label>
+                    <div class="input-group">
+                        <label for="inputCompanyName" class="text-sm font-medium text-gray-700">Nama Perusahaan</label>
+                        <input type="text" id="inputCompanyName" value="PT. Nama Perusahaan Anda" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Nama Perusahaan">
+                    </div>
+                    
+                    
+
+<div class="input-group">
+                        <label for="inputAddressLine1" class="text-sm font-medium text-gray-700">Alamat Baris 1</label>
+                        <input type="text" id="inputAddressLine1" value="Jl. Contoh Raya No. 12" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Jalan dan Nomor">
+                    </div>
+                    <div class="input-group">
+                        <label for="inputAddressLine2" class="text-sm font-medium text-gray-700">Alamat Baris 2</label>
+                        <input type="text" id="inputAddressLine2" value="Kec. Sudirman, Jakarta Pusat" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Kecamatan, Kota">
+                    </div>
+                    <div class="input-group">
+                        <label for="inputAddressLine3" class="text-sm font-medium text-gray-700">Alamat Baris 3</label>
+                        <input type="text" id="inputAddressLine3" value="Indonesia - 10220" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Negara & Kode Pos">
+                    </div>
+                    
+                    <div class="input-group pt-4">
+                        <label for="inputCompanyLogoFile" class="text-sm font-medium text-gray-700">Upload Logo (Opsional)</label>
+                        <input type="file" id="inputCompanyLogoFile" accept="image/*" class="p-2 border border-gray-300 rounded-lg bg-gray-50">
+                    </div>
+                </div>
+
+                
+
+<div class="space-y-4 mb-8">
+                    <label class="block text-sm font-bold text-gray-700">Detail Karyawan & Transfer</label>
+                    <div class="input-group">
+                        <label for="inputSlipID" class="text-sm font-medium text-gray-700">No. Slip Gaji (ID)</label>
+                        <input type="text" id="inputSlipID" value="SLIP-001" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="No. Slip Gaji (ID)">
+                    </div>
+                    
+                    
+
+<div class="input-group">
+                        <label for="inputSlipMonth" class="text-sm font-medium text-gray-700">Bulan Gaji (Periode)</label>
+                        <input type="text" id="inputSlipMonth" value="NOVEMBER 2025" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Bulan Gaji (e.g., November 2025)">
+                    </div>
+                    
+                    
+
+<div class="input-group">
+                        <label for="inputTransferDate" class="text-sm font-medium text-gray-700">Tanggal Transfer</label>
+                        <input type="date" id="inputTransferDate" value="2025-11-25" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div class="input-group pt-4">
+                        <label for="inputName" class="text-sm font-medium text-gray-700">Nama Karyawan</label>
+                        <input type="text" id="inputName" value="Nama Karyawan" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Nama Karyawan">
+                    </div>
+                    <div class="input-group">
+                        <label for="inputPosition" class="text-sm font-medium text-gray-700">Jabatan</label>
+                        <input type="text" id="inputPosition" value="Staf Administrasi" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Jabatan">
+                    </div>
+
+                    
+
+<div class="input-group">
+                        <label for="inputBankAccountNumber" class="text-sm font-medium text-gray-700">Nomor Rekening</label>
+                        <input type="text" id="inputBankAccountNumber" value="123-456-7890" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Nomor Rekening">
+                    </div>
+                    
+                    
+
+<div class="input-group">
+                        <label for="inputBankName" class="text-sm font-medium text-gray-700">Nama Bank</label>
+                        <input type="text" id="inputBankName" value="BANK ABC" class="p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Nama Bank">
+                    </div>
+                    
+                    
+
+<div class="input-group pt-4">
+                        <label for="inputStatus" class="text-sm font-medium text-gray-700">Status Pajak (PTKP)</label>
+                        <select id="inputStatus" class="p-2 border border-blue-500 text-blue-800 font-medium rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            <option value="TK/0" selected>TK/0 (Tidak Kawin, 0 Tanggungan)</option>
+                            <option value="K/0">K/0 (Kawin, 0 Tanggungan)</option>
+                            <option value="K/1">K/1 (Kawin, 1 Tanggungan)</option>
+                            <option value="K/2">K/2 (Kawin, 2 Tanggungan)</option>
+                            <option value="K/3">K/3 (Kawin, 3 Tanggungan)</option>
+                            <option value="KI/0">KI/0 (Kawin Istri Digabung, 0 Tanggungan)</option>
+                        </select>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Tarif PPh 21 Progresif: <span id="pph21RateInfo">5% - 35%</span></p>
+                </div>
+
+                
+
+<h3 class="text-lg font-medium mt-6 mb-4 text-gray-700">Penerimaan (Earnings)</h3>
+                <div class="space-y-2">
+                    <div class="earnings-item"><label class="w-1/2 text-sm text-gray-700">Gaji Pokok</label><input type="number" id="inputBasicSalary" value="8000000" class="w-1/2 p-2 border border-gray-300 rounded-lg text-right" placeholder="0"></div>
+                    <div class="earnings-item"><label class="w-1/2 text-sm text-gray-700">Tunjangan</label><input type="number" id="inputAllowance" value="500000" class="w-1/2 p-2 border border-gray-300 rounded-lg text-right" placeholder="0"></div>
+                    <div class="earnings-item"><label class="w-1/2 text-sm text-gray-700">Lembur</label><input type="number" id="inputOvertime" value="0" class="w-1/2 p-2 border border-gray-300 rounded-lg text-right" placeholder="0"></div>
+                    <div class="earnings-item"><label class="w-1/2 text-sm text-gray-700">Transport</label><input type="number" id="inputTransport" value="250000" class="w-1/2 p-2 border border-gray-300 rounded-lg text-right" placeholder="0"></div>
+                    <div class="earnings-item"><label class="w-1/2 text-sm text-gray-700">Uang Makan</label><input type="number" id="inputMealAllowance" value="1000000" class="w-1/2 p-2 border border-gray-300 rounded-lg text-right" placeholder="0"></div>
+                    <div class="earnings-item"><label class="w-1/2 text-sm text-gray-700">Bonus</label><input type="number" id="inputBonus" value="0" class="w-1/2 p-2 border border-gray-300 rounded-lg text-right" placeholder="0"></div>
+                </div>
+
+                
+
+<h3 class="text-lg font-medium mt-6 mb-4 text-gray-700">Potongan (Deductions)</h3>
+                <div class="space-y-2">
+                    
+
+<div class="deduction-item"><label class="w-1/2 text-sm text-gray-700">Pinjaman Karyawan</label><input type="number" id="inputLoanDeduction" value="500000" class="w-1/2 p-2 border border-gray-300 rounded-lg text-right" placeholder="0"></div>
+                    
+                    
+
+<div class="deduction-item">
+                        <label class="w-1/2 text-gray-700 text-sm">BPJS Kes. + JP</label>
+                        <input type="text" id="inputBPJS" value="0" class="w-1/2 p-2 border border-gray-300 bg-white text-right rounded-lg" placeholder="0" readonly>
+                    </div>
+                    
+                    
+
+<div class="deduction-item">
+                        <label class="w-1/2 text-gray-700 text-sm">JHT</label>
+                        <input type="text" id="inputJHT" value="0" class="w-1/2 p-2 border border-gray-300 bg-white text-right rounded-lg" placeholder="0" readonly>
+                    </div>
+                    
+                    
+
+<div class="deduction-item">
+                        <label class="w-1/2 text-gray-700 text-sm">PPh 21</label>
+                        <input type="text" id="inputPPH21" value="0" class="w-1/2 p-2 border border-gray-300 bg-white text-right rounded-lg" placeholder="0" readonly>
+                    </div>
+                    
+                    <div class="deduction-item"><label class="w-1/2 text-sm text-gray-700">Lain-lain (Manual)</label><input type="number" id="inputOtherDeduction" value="0" class="w-1/2 p-2 border border-gray-300 rounded-lg text-right" placeholder="0"></div>
+                </div>
+
+                
+
+<h3 class="text-lg font-medium mt-8 mb-4 border-t pt-4 text-gray-700">Detail Tanda Tangan Penerima</h3>
+                <div class="space-y-4">
+                    <div class="input-group">
+                        <label for="inputReceiverSignatureFile" class="text-sm font-medium text-gray-700">Tanda Tangan Karyawan (Opsional)</label>
+                        <input type="file" id="inputReceiverSignatureFile" accept="image/*" class="p-2 border border-gray-300 rounded-lg bg-gray-50">
+                    </div>
+                </div>
+            </div>
+
+            
+
+<div class="bg-white p-2 md:p-4 rounded-xl shadow-lg lg:col-span-1">
+                
+
+<div id="slip-container" class="border border-gray-400 p-4"> 
+
+                    
+
+<div id="payslip-content" class="text-[10px] p-1"> 
+                        
+                        
+
+<div class="flex justify-between items-center border-b-2 border-black pb-1 mb-2"> 
+                            <div class="flex-1">
+                                <p class="text-sm font-bold text-black" id="outputCompanyName">PT. Nama Perusahaan Anda</p>
+                                
+
+<p class="text-[9px] text-gray-600 leading-tight" id="outputAddressLine1">Jl. Contoh Raya No. 12</p>
+                                <p class="text-[9px] text-gray-600 leading-tight" id="outputAddressLine2">Kec. Sudirman, Jakarta Pusat</p>
+                                <p class="text-[9px] text-gray-600 leading-tight" id="outputAddressLine3">Indonesia - 10220</p>
+                            </div>
+                            <div class="ml-4 flex-shrink-0">
+                                
+
+<img id="outputCompanyLogo" src="" alt="Logo Perusahaan" class="h-10 max-w-full object-contain" style="display:none;">
+                                <div id="logoTextPlaceholder" class="text-xl font-extrabold text-red-700" style="font-family: serif;">LOGO</div>
+                            </div>
+                        </div>
+
+                        
+
+<div class="text-center mb-2">
+                            <p class="text-xs font-bold uppercase border-b border-t border-black py-1 tracking-wider">
+                                SLIP GAJI BULAN <span id="outputSlipMonth">NOVEMBER 2025</span>
+                            </p>
+                        </div>
+
+                        
+
+<div class="grid grid-cols-2 gap-4 mb-2">
+                            <div class="space-y-0.5">
+                                <div class="flex">
+                                    <span class="w-24 font-semibold">ID</span>
+                                    <span class="mr-2">:</span>
+                                    <span id="outputSlipID" class="px-2 bg-yellow-100 rounded">SLIP-001</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-24 font-semibold">NAMA</span>
+                                    <span class="mr-2">:</span>
+                                    <span id="outputName">Nama Karyawan</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="w-24 font-semibold">JABATAN</span>
+                                    <span class="mr-2">:</span>
+                                    <span id="outputPosition">Staf Administrasi</span>
+                                </div>
+                            </div>
+                            <div class="space-y-0.5">
+                                
+
+<div class="flex">
+                                    <span class="w-24 font-semibold">NO. REK</span>
+                                    <span class="mr-2">:</span>
+                                    <span id="outputBankAccountNumber">123-456-7890</span>
+                                </div>
+                                
+
+<div class="flex">
+                                    <span class="w-24 font-semibold">NAMA BANK</span>
+                                    <span class="mr-2">:</span>
+                                    <span id="outputBankName">BANK ABC</span>
+                                </div>
+                                
+
+<div class="flex">
+                                    <span class="w-24 font-semibold">STS PAJAK</span>
+                                    <span class="mr-2">:</span>
+                                    <span id="outputStatus">TK/0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        
+
+<div class="flex border border-black mb-1">
+                            
+
+<div class="w-1/2 border-r border-black">
+                                <div class="text-center font-bold border-b border-black p-0.5 bg-gray-100">PENERIMAAN</div>
+                                <div class="p-1 space-y-0.5">
+                                    <div class="flex"><span class="w-40">Gaji Pokok</span><span class="w-4">:</span><span class="flex-1 text-right" id="dispBasicSalary">0</span></div>
+                                    <div class="flex"><span class="w-40">Tunjangan</span><span class="w-4">:</span><span class="flex-1 text-right" id="dispAllowance">0</span></div>
+                                    <div class="flex"><span class="w-40">Lembur</span><span class="w-4">:</span><span class="flex-1 text-right" id="dispOvertime">0</span></div>
+                                    <div class="flex"><span class="w-40">Transport</span><span class="w-4">:</span><span class="flex-1 text-right" id="dispTransport">0</span></div>
+                                    <div class="flex"><span class="w-40">Uang Makan</span><span class="w-4">:</span><span class="flex-1 text-right" id="dispMealAllowance">0</span></div>
+                                    <div class="flex"><span class="w-40">Bonus</span><span class="w-4">:</span><span class="flex-1 text-right" id="dispBonus">0</span></div>
+                                    
+
+<div class="flex"><span class="w-40">&nbsp;</span><span class="w-4"></span><span class="flex-1 text-right"></span></div>
+                                </div>
+                            </div>
+
+                            
+
+<div class="w-1/2">
+                                <div class="text-center font-bold border-b border-black p-0.5 bg-gray-100">POTONGAN</div>
+                                <div class="p-1 space-y-0.5">
+                                    
+
+<div class="flex"><span class="w-40">Pinjaman Karyawan</span><span class="w-4">:</span><span class="flex-1 text-right" id="dispLoanDeduction">0</span></div>
+                                    
+                                    <div class="flex"><span class="w-40 text-black">BPJS Kes. + JP</span><span class="w-4 text-black">:</span><span class="flex-1 text-right text-black" id="dispBPJS">0</span></div>
+                                    
+                                    <div class="flex"><span class="w-40 text-black">JHT</span><span class="w-4 text-black">:</span><span class="flex-1 text-right text-black" id="dispJHT">0</span></div>
+                                    
+                                    <div class="flex"><span class="w-40 text-black">PPh 21</span><span class="w-4 text-black">:</span><span class="flex-1 text-right text-black" id="dispPPH21">0</span></div>
+                                    <div class="flex"><span class="w-40">Lain-lain (Manual)</span><span class="w-4">:</span><span class="flex-1 text-right" id="dispOtherDeduction">0</span></div>
+                                    
+
+<div class="flex"><span class="w-40">&nbsp;</span><span class="w-4"></span><span class="flex-1 text-right"></span></div>
+                                    <div class="flex"><span class="w-40">&nbsp;</span><span class="w-4"></span><span class="flex-1 text-right"></span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        
+
+<div class="flex font-extrabold text-sm border-t-2 border-black pt-1 mb-0.5">
+                            
+
+<div class="w-1/2 border-r border-black bg-gray-200 p-0.5 flex justify-between">
+                                <span>TOTAL PENERIMAAN</span>
+                                <span id="totalEarnings" class="pl-2">0</span>
+                            </div>
+                            
+
+<div class="w-1/2 bg-gray-200 p-0.5 flex justify-between">
+                                <span>TOTAL POTONGAN</span>
+                                <span id="totalDeductions" class="pl-2">0</span>
+                            </div>
+                        </div>
+
+                        
+
+<div class="relative py-2"> 
+
+<div class="absolute w-[49%] right-0 top-[2px] h-[1px] bg-black"></div> 
+
+<div class="flex justify-between items-center">
+                                <span class="font-extrabold text-lg">TAKE HOME PAY (THP)</span>
+                                <span id="takeHomePay" class="font-extrabold text-lg">0</span> 
+                            </div>
+                            
+
+<div class="absolute w-full h-[2px] bg-black bottom-[2px]"></div> 
+
+</div>
+                        
+                        
+
+<div class="flex justify-between text-[10px] mt-1"> 
+                            
+                            
+
+<div class="text-left" style="width: 40%;"> 
+                                <p class="text-[9px] leading-tight">Pembayaran gaji Telah Dilakukan Perusahaan Melalui Transfer</p> 
+                                <div class="relative h-10 mb-1 pt-2">
+                                     
+
+<p class="text-[9px] text-gray-700">Tanggal Transfer: <span id="outputTransferDate">...</span></p> 
+                                </div>
+                                <div class="pt-1"> 
+                                    <p class="text-[9px]">&nbsp;</p> 
+                                    <p class="text-[9px]">&nbsp;</p> 
+                                </div>
+                            </div>
+                            
+                            
+
+<div class="text-right" style="width: 40%;"> 
+                                <p>Tanda Tangan,</p>
+                                <div class="relative h-10 mb-1">
+                                    
+
+<img id="outputReceiverSignature" src="" alt="Tanda Tangan Karyawan" class="signature-image right-0" style="display:none;">
+                                </div>
+                                <div class="pt-1"> 
+                                    
+
+<p class="border-b border-black font-semibold inline-block pb-1" id="outputReceiverName">Nama Karyawan</p>
+                                    
+
+<p class="text-[9px]" id="outputEmployeePosition">Staf Administrasi</p> 
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    
+
+</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL CONSTANTS ---
+        const MAX_SALARY_JP = 12000000; // Batas Atas Gaji Jaminan Pensiun (JP)
+        const MAX_SALARY_KES = 12000000; // Batas Atas Gaji BPJS Kesehatan
+
+        const JHT_RATE_WORKER = 0.0200; // JHT Karyawan (2.0%)
+        const JP_RATE_WORKER = 0.0100; // JP Karyawan (1.0%)
+        const BPJS_KES_RATE_WORKER = 0.0100; // BPJS Kesehatan Karyawan (1.0%)
+
+        // Data PTKP Tahunan (Penghasilan Tidak Kena Pajak)
+        const PTKP_DATA = {
+            'TK/0': 54000000,   // Tidak Kawin, 0 Tanggungan
+            'K/0': 58500000,    // Kawin, 0 Tanggungan (54jt + 4.5jt)
+            'K/1': 63000000,    // Kawin, 1 Tanggungan (58.5jt + 4.5jt)
+            'K/2': 67500000,    // Kawin, 2 Tanggungan (63jt + 4.5jt)
+            'K/3': 72000000,    // Kawin, 3 Tanggungan (67.5jt + 4.5jt) - Maksimal
+            'KI/0': 112500000,  // Kawin Istri Digabung, 0 Tanggungan (K/0 + 54jt)
+        };
+
+        // --- IMAGE RESIZING CONFIGURATION ---
+        // Max dimensions for Company Logo - MODIFIED TO 60PX HIGH, 300PX WIDE
+        const LOGO_MAX_WIDTH = 300; 
+        const LOGO_MAX_HEIGHT = 60;
+        // Max dimensions for Receiver Signature
+        const SIGNATURE_MAX_WIDTH = 120;
+        const SIGNATURE_MAX_HEIGHT = 70;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                // Attach updateSlip to text/number inputs and selects
+                if (input.type === 'text' || input.type === 'number' || input.tagName === 'SELECT' || input.type === 'date') {
+                    input.addEventListener('input', updateSlip);
+                    input.addEventListener('change', updateSlip);
+                }
+            });
+
+            // Add listeners for image uploads, now using a generic handler with max dimensions
+            document.getElementById('inputCompanyLogoFile').addEventListener('change', (event) => 
+                handleImageUploadAndResize(event.target.files[0], 'outputCompanyLogo', LOGO_MAX_WIDTH, LOGO_MAX_HEIGHT, 'logoTextPlaceholder')
+            );
+            document.getElementById('inputReceiverSignatureFile').addEventListener('change', (event) => 
+                handleImageUploadAndResize(event.target.files[0], 'outputReceiverSignature', SIGNATURE_MAX_WIDTH, SIGNATURE_MAX_HEIGHT)
+            );
+
+            // Set default date for transfer to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('inputTransferDate').value = today;
+
+            // Initial population and calculation
+            updateSlip();
+            
+            // Add export listener
+            document.getElementById('exportBtn').addEventListener('click', exportAsPNG);
+        });
+        
+        // --- MODIFIKASI: Generic function to handle image upload, resize, and display ---
+        function handleImageUploadAndResize(file, outputImageId, maxWidth, maxHeight, textPlaceholderId = null) {
+            const outputImg = document.getElementById(outputImageId);
+            const textPlaceholder = textPlaceholderId ? document.getElementById(textPlaceholderId) : null;
+
+            if (!file) {
+                outputImg.src = '';
+                outputImg.style.display = 'none';
+                if (textPlaceholder) {
+                    textPlaceholder.style.display = 'block';
+                }
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Calculate the new dimensions while maintaining aspect ratio
+                    // First, check height constraint
+                    let ratio = 1;
+                    if (height > maxHeight) {
+                        ratio = maxHeight / height;
+                        height = maxHeight;
+                        width = width * ratio;
+                    }
+                    
+                    // Second, check width constraint with the new size
+                    if (width > maxWidth) {
+                        ratio = maxWidth / width;
+                        width = maxWidth;
+                        height = height * ratio; 
+                    }
+                    
+                    // Re-calculate the final dimensions based on the new constraints (height-priority)
+                    let targetWidth = img.width;
+                    let targetHeight = img.height;
+
+                    if (targetHeight > maxHeight) {
+                        targetWidth *= maxHeight / targetHeight;
+                        targetHeight = maxHeight;
+                    }
+                    
+                    if (targetWidth > maxWidth) {
+                        targetHeight *= maxWidth / targetWidth;
+                        targetWidth = maxWidth;
+                    }
+
+                    // Ensure target dimensions are at least 1px
+                    targetWidth = Math.max(1, targetWidth);
+                    targetHeight = Math.max(1, targetHeight);
+                    
+                    const canvas = document.createElement('canvas');
+                    // Use the calculated target dimensions for the canvas size
+                    canvas.width = targetWidth; 
+                    canvas.height = targetHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+                    outputImg.src = canvas.toDataURL('image/png'); // Use PNG for transparency if needed
+                    outputImg.style.display = 'block';
+                    if (textPlaceholder) {
+                        textPlaceholder.style.display = 'none';
+                    }
+                    updateSlip(); // Re-render slip if image affects layout
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Helper function to format number to Rupiah with "Rp. " prefix
+        const formatRupiah = (number) => {
+            if (isNaN(number) || number === null || number === 0) return 'Rp. 0';
+            const value = Number(number);
+            const formatted = value.toLocaleString('id-ID', {
+                minimumFractionDigits: 0, // Dibulatkan ke bilangan bulat
+                maximumFractionDigits: 0
+            });
+            // Adding Rp. prefix
+            return `Rp. ${formatted}`;
+        };
+
+        // --- PPH 21 CALCULATION FUNCTIONS ---
+
+        // Function to get PTKP (Penghasilan Tidak Kena Pajak) based on status
+        function getPTKP(status) {
+            const cleanedStatus = status.toUpperCase().trim();
+            return PTKP_DATA[cleanedStatus] || PTKP_DATA['TK/0']; 
+        }
+
+        // Function to calculate PPh 21 Tahunan using Progressive Tariff
+        function calculateProgressiveTax(pkp) {
+            if (pkp <= 0) return 0;
+
+            let pph21 = 0;
+            let remainingPKP = pkp;
+
+            // Layer 1: up to 60 juta (5%)
+            const layer1Limit = 60000000;
+            if (remainingPKP > 0) {
+                const taxableAmount = Math.min(remainingPKP, layer1Limit);
+                pph21 += taxableAmount * 0.05;
+                remainingPKP -= taxableAmount;
+            }
+
+            // Layer 2: 60 juta to 250 juta (15%)
+            const layer2Limit = 250000000;
+            const layer2Range = layer2Limit - layer1Limit;
+            if (remainingPKP > 0) {
+                const taxableAmount = Math.min(remainingPKP, layer2Range);
+                pph21 += taxableAmount * 0.15;
+                remainingPKP -= taxableAmount;
+            }
+
+            // Layer 3: 250 juta to 500 juta (25%)
+            const layer3Limit = 500000000;
+            const layer3Range = layer3Limit - layer2Limit;
+            if (remainingPKP > 0) {
+                const taxableAmount = Math.min(remainingPKP, layer3Range);
+                pph21 += taxableAmount * 0.25;
+                remainingPKP -= taxableAmount;
+            }
+
+            // Layer 4: 500 juta to 5 Miliar (30%)
+            const layer4Limit = 5000000000;
+            const layer4Range = layer4Limit - layer3Limit;
+            if (remainingPKP > 0) {
+                const taxableAmount = Math.min(remainingPKP, layer4Range);
+                pph21 += taxableAmount * 0.30;
+                remainingPKP -= taxableAmount;
+            }
+
+            // Layer 5: above 5 Miliar (35%)
+            if (remainingPKP > 0) {
+                pph21 += remainingPKP * 0.35;
+            }
+
+            return Math.round(pph21);
+        }
+
+        /**
+         * Menghitung BPJS Karyawan dan Perusahaan berdasarkan Gaji Pokok.
+         * @param {number} salary - Gaji Pokok/Bruto Bulanan
+         * @returns {object} Objek berisi Iuran Karyawan BPJS Kes, JHT, dan JP.
+         */
+        function calculateBPJSDeductions(salary) {
+            if (salary <= 0) {
+                return { bpjsKes: 0, jht: 0, jp: 0 };
+            }
+
+            // Gaji dasar untuk JHT (Full Salary)
+            const baseSalaryJHT = salary; 
+            
+            // Gaji dasar untuk JP dan BPJS Kes (Max 12jt)
+            const baseSalaryJP = Math.min(salary, MAX_SALARY_JP); 
+            const baseSalaryKes = Math.min(salary, MAX_SALARY_KES);
+
+            const jhtWorker = Math.round(JHT_RATE_WORKER * baseSalaryJHT);
+            const bpjsKesWorker = Math.round(BPJS_KES_RATE_WORKER * baseSalaryKes);
+            const jpWorker = Math.round(JP_RATE_WORKER * baseSalaryJP);
+
+            return { 
+                bpjsKes: bpjsKesWorker, 
+                jht: jhtWorker, 
+                jp: jpWorker 
+            };
+        }
+
+        // Main PPh 21 Calculation Function following the flow chart
+        function calculatePPH21(grossIncome, employeeDeductionJHT, employeeDeductionJP, employeeDeductionKes, status) {
+            // 1. Hitung Penghasilan Bruto Bulanan (Gaji + Tunjangan Lain)
+            const grossMonthly = grossIncome; 
+
+            // 2. Hitung Pengurang (Deductions for tax calculation)
+            // Biaya Jabatan: 5% of gross, max 500.000
+            const biayaJabatan = Math.min(grossMonthly * 0.05, 500000);
+            
+            // Iuran Karyawan yang menjadi pengurang PKP
+            const iuranKaryawanPajak = employeeDeductionJHT + employeeDeductionJP; // JHT dan JP saja yang diakui sebagai pengurang PKP
+            
+            const totalPengurangBulanan = biayaJabatan + iuranKaryawanPajak;
+            
+            // 3. Hitung Penghasilan Neto Bulanan
+            const netMonthly = grossMonthly - totalPengurangBulanan;
+            
+            // 4. Hitung Penghasilan Neto Tahunan
+            const netAnnual = Math.max(0, netMonthly * 12); // Pastikan tidak negatif
+
+            // 5. Ambil PTKP Berdasarkan Status
+            const ptkp = getPTKP(status);
+
+            // 6. Hitung PKP Tahunan = Neto Thn - PTKP
+            let pkpAnnual = netAnnual - ptkp;
+            
+            // PKP <= 0? --> Set PPh21 = 0
+            if (pkpAnnual <= 0) {
+                return 0; // PPh21 Bulanan = 0
+            }
+            
+            // PKP harus dibulatkan ke bawah (ribuan penuh)
+            pkpAnnual = Math.floor(pkpAnnual / 1000) * 1000;
+
+            // 7. Hitung PPh21 Tahunan (Tarif Progresif)
+            const pph21Annual = calculateProgressiveTax(pkpAnnual);
+            
+            // 8. Hitung PPh21 Bulanan = PPh Thn / 12
+            // PPh 21 Bulanan dibulatkan ke ribuan terdekat
+            const pph21Monthly = Math.round(pph21Annual / 12);
+            
+            return pph21Monthly;
+        }
+
+        // The main function to calculate and update the slip display
+        function updateSlip() {
+            // --- 1. Get Employee and Company Data ---
+            const companyName = document.getElementById('inputCompanyName').value;
+            // Get 3 address lines
+            const addressLine1 = document.getElementById('inputAddressLine1').value;
+            const addressLine2 = document.getElementById('inputAddressLine2').value;
+            const addressLine3 = document.getElementById('inputAddressLine3').value;
+
+            const slipID = document.getElementById('inputSlipID').value;
+            const slipMonth = document.getElementById('inputSlipMonth').value.toUpperCase();
+            const transferDateInput = document.getElementById('inputTransferDate').value;
+            const name = document.getElementById('inputName').value;
+            const position = document.getElementById('inputPosition').value;
+            
+            // Bank Details
+            const bankAccountNumber = document.getElementById('inputBankAccountNumber').value;
+            const bankName = document.getElementById('inputBankName').value;
+            
+            // Get value from select dropdown
+            const statusSelect = document.getElementById('inputStatus');
+            const status = statusSelect.value; 
+            const statusText = statusSelect.options[statusSelect.selectedIndex].text;
+            
+            const logoImage = document.getElementById('outputCompanyLogo');
+            const logoText = document.getElementById('logoTextPlaceholder');
+            const pph21RateInfo = document.getElementById('pph21RateInfo');
+
+            // --- Update static/text outputs ---
+            document.getElementById('outputCompanyName').textContent = companyName;
+            // Update 3 address lines
+            document.getElementById('outputAddressLine1').textContent = addressLine1;
+            document.getElementById('outputAddressLine2').textContent = addressLine2;
+            document.getElementById('outputAddressLine3').textContent = addressLine3;
+            
+            document.getElementById('outputSlipID').textContent = slipID;
+            document.getElementById('outputSlipMonth').textContent = slipMonth;
+            document.getElementById('outputName').textContent = name;
+            document.getElementById('outputPosition').textContent = position;
+            document.getElementById('outputStatus').textContent = status;
+            
+            // Set Bank Details
+            document.getElementById('outputBankAccountNumber').textContent = bankAccountNumber;
+            document.getElementById('outputBankName').textContent = bankName;
+
+            // Set Employee Position on signature line
+            document.getElementById('outputEmployeePosition').textContent = position;
+            document.getElementById('outputReceiverName').textContent = name; // Auto-fill receiver name
+            
+            // Set Dynamic Date from Input for Transfer Confirmation
+            let formattedTransferDate = '...';
+            if (transferDateInput) {
+                try {
+                    const dateParts = transferDateInput.split('-');
+                    const date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+                    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                    formattedTransferDate = date.toLocaleDateString('id-ID', options);
+                } catch (e) {
+                    console.error("Gagal memformat tanggal transfer:", e);
+                    formattedTransferDate = 'Tanggal tidak valid';
+                }
+            }
+            document.getElementById('outputTransferDate').textContent = formattedTransferDate;
+
+            // Update the PPh 21 Rate Information
+            pph21RateInfo.textContent = `PTKP ${statusText} diterapkan, dan tarif progresif PPh 21 (5% - 35%) digunakan.`;
+
+
+            // Toggle Logo placeholder
+            if (logoImage.src && logoImage.style.display === 'block') {
+                logoText.style.display = 'none';
+            } else {
+                logoText.style.display = 'block';
+            }
+            
+            
+            // --- 2. Get Numeric Earnings Data ---
+            const basicSalary = Number(document.getElementById('inputBasicSalary').value) || 0;
+            const allowance = Number(document.getElementById('inputAllowance').value) || 0;
+            const overtime = Number(document.getElementById('inputOvertime').value) || 0;
+            const transport = Number(document.getElementById('inputTransport').value) || 0;
+            const mealAllowance = Number(document.getElementById('inputMealAllowance').value) || 0;
+            const bonus = Number(document.getElementById('inputBonus').value) || 0;
+
+            // --- 3. Auto-Calculate BPJS/JHT/JP Employee Deductions ---
+            const bpjsDeductions = calculateBPJSDeductions(basicSalary);
+            
+            // Sum of BPJS Health and Jaminan Pensiun (JP) contributions from employee
+            const bpjsKesAndJP = bpjsDeductions.bpjsKes + bpjsDeductions.jp;
+            const jhtDeduction = bpjsDeductions.jht;
+
+            // Update the read-only input fields in the FORM (without 'Rp.')
+            document.getElementById('inputBPJS').value = formatRupiah(bpjsKesAndJP).replace('Rp. ', '');
+            document.getElementById('inputJHT').value = formatRupiah(jhtDeduction).replace('Rp. ', '');
+            
+            // --- 4. Get Other Numeric Deductions Data (Manual) ---
+            const loanDeduction = Number(document.getElementById('inputLoanDeduction').value) || 0;
+            const otherDeduction = Number(document.getElementById('inputOtherDeduction').value) || 0;
+
+            // --- 5. Calculation ---
+            // Calculate Monthly Gross Income (used for PPh 21 Bruto)
+            const totalEarningsValue = basicSalary + allowance + overtime + transport + mealAllowance + bonus;
+            
+            // --- PPH 21 CALCULATION ---
+            const pph21AutoCalculated = calculatePPH21(
+                totalEarningsValue,             // Gross Income
+                jhtDeduction,                   // JHT Karyawan (Pengurang PPh 21)
+                bpjsDeductions.jp,              // JP Karyawan (Pengurang PPh 21)
+                bpjsDeductions.bpjsKes,         // BPJS Kes Karyawan (TIDAK Pengurang PPh 21)
+                status                          // Employee Status (for PTKP lookup)
+            );
+            
+            // Update the PPH 21 input field and deduction variable (without 'Rp.')
+            document.getElementById('inputPPH21').value = formatRupiah(pph21AutoCalculated).replace('Rp. ', '');
+            const pph21Deduction = pph21AutoCalculated;
+            
+            // Calculate Total Deductions (sum of manual and auto-calculated deductions)
+            const totalDeductionsValue = loanDeduction + bpjsKesAndJP + jhtDeduction + pph21Deduction + otherDeduction;
+            const takeHomePayValue = totalEarningsValue - totalDeductionsValue;
+
+            // --- 6. Update Earnings Display (with 'Rp.') ---
+            document.getElementById('dispBasicSalary').textContent = formatRupiah(basicSalary);
+            document.getElementById('dispAllowance').textContent = formatRupiah(allowance);
+            document.getElementById('dispOvertime').textContent = formatRupiah(overtime);
+            document.getElementById('dispTransport').textContent = formatRupiah(transport);
+            document.getElementById('dispMealAllowance').textContent = formatRupiah(mealAllowance);
+            document.getElementById('dispBonus').textContent = formatRupiah(bonus);
+
+            // --- 7. Update Deductions Display (with 'Rp.') ---
+            document.getElementById('dispLoanDeduction').textContent = formatRupiah(loanDeduction);
+            document.getElementById('dispBPJS').textContent = formatRupiah(bpjsKesAndJP); 
+            document.getElementById('dispJHT').textContent = formatRupiah(jhtDeduction); 
+            document.getElementById('dispPPH21').textContent = formatRupiah(pph21Deduction); 
+            document.getElementById('dispOtherDeduction').textContent = formatRupiah(otherDeduction);
+
+            // --- 8. Update Summary Display (with 'Rp.') ---
+            document.getElementById('totalEarnings').textContent = formatRupiah(totalEarningsValue);
+            document.getElementById('totalDeductions').textContent = formatRupiah(totalDeductionsValue);
+            document.getElementById('takeHomePay').textContent = formatRupiah(takeHomePayValue);
+        }
+
+        // Function to export the slip as PNG
+        function exportAsPNG() {
+            // *** Capture the container with fixed size (21cm x 12cm) ***
+            const element = document.getElementById('slip-container'); 
+            const button = document.getElementById('exportBtn');
+            
+            // Define the exact base dimensions (21cm x 12cm at 96 DPI)
+            const baseWidth = 794;
+            const baseHeight = 454;
+
+            // Temporarily hide the button and show a loading state
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Memproses... Harap tunggu.';
+
+            // html2canvas options to capture the content accurately
+            const options = {
+                scale: 3, // Increased scale for better quality (Output image: 2382px x 1362px)
+                logging: false,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                // Explicitly define the width/height for the canvas to guarantee 21x12 size
+                width: baseWidth,
+                height: baseHeight,
+            };
+
+            html2canvas(element, options).then(canvas => {
+                // Create an image URL from the canvas
+                const image = canvas.toDataURL('image/png');
+                
+                // Create a temporary link element to trigger download
+                const link = document.createElement('a');
+                link.href = image;
+                link.download = `slip_gaji_${document.getElementById('outputName').textContent.replace(/\s/g, '_')}_${document.getElementById('outputSlipMonth').textContent.replace(/\s/g, '_')}.png`;
+                
+                // Append to body and click it programmatically
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Restore button state
+                button.disabled = false;
+                button.textContent = originalText;
+            }).catch(error => {
+                console.error("Error saat ekspor:", error);
+                // Restore button state on error
+                button.disabled = false;
+                button.textContent = originalText;
+            });
+        }
+    </script>
+</body>
+</html>
